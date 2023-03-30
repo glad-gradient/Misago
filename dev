@@ -15,9 +15,12 @@ port_postgresql=5432
 required_ports=($port_postgresql $port_django)
 
 # Default superuser
-username="Admin"
-password="password"
-email="admin@example.com"
+username=${SUPERUSER_USERNAME}
+password=${SUPERUSER_PASSWORD}
+email=${SUPERUSER_EMAIL}
+#username="Admin"
+#password="password"
+#email="admin@example.com"
 
 # Utility functions used by action commands
 error() {
@@ -157,18 +160,18 @@ after_init_message() {
     echo
     echo "Running server will be available in the browser under the http://127.0.0.1:${port_django} address."
     echo
-    echo "Default superuser has been created with this username and password:"
-    echo
-    echo "Username:    $username"
-    echo "Password:    $password"
-    echo
-    echo "To connect to development database use following credentials:"
-    echo
-    echo "User:         misago"
-    echo "Password:     misago"
-    echo "Database:     misago"
-    echo "Host:         postgres"
-    echo "Port:         5432"
+#    echo "Default superuser has been created with this username and password:"
+#    echo
+#    echo "Username:    $username"
+#    echo "Password:    $password"
+#    echo
+#    echo "To connect to development database use following credentials:"
+#    echo
+#    echo "User:         misago"
+#    echo "Password:     misago"
+#    echo "Database:     misago"
+#    echo "Host:         postgres"
+#    echo "Port:         5432"
     echo
     echo "Note: development server must be running for connection to be possible."
     echo
