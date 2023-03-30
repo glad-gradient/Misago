@@ -7,6 +7,27 @@ If you rely on any of those in your code, make sure you use `misago.conf.setting
 instead of Django's `django.conf.settings`.
 """
 
+
+def environment_variables(filename):
+    env_vars = {}
+    with open(filename) as f:
+        for line in f:
+            if line.startswith('#') or not line.strip():
+                continue
+            # if 'export' not in line:
+            #     continue
+            # Remove leading `export `, if you have those
+            # then, split name / value pair
+            # key, value = line.replace('export ', '', 1).strip().split('=', 1)
+            key, value = line.strip().split('=', 1)
+            # os.environ[key] = value  # Load to local environ
+            env_vars[key] = value
+
+    return env_vars
+
+
+DB_ENV_VARS = environment_variables('postgredb.env')
+
 # Permissions system extensions
 # https://misago.readthedocs.io/en/latest/developers/acls.html#extending-permissions-system
 
@@ -98,6 +119,19 @@ MISAGO_NEW_REGISTRATIONS_VALIDATORS = [
     "misago.users.validators.validate_with_sfs",
 ]
 
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DB_ENV_VARS['POSTGRES_DB'],
+        'USER': DB_ENV_VARS['POSTGRES_USER'],
+        'PASSWORD': DB_ENV_VARS['POSTGRES_PASSWORD'],
+        'HOST': DB_ENV_VARS['POSTGRES_HOST'],
+        'TEST': {
+            'NAME': DB_ENV_VARS['POSTGRES_TEST_DB'],
+        },
+    }
+}
 
 # Custom profile fields
 
