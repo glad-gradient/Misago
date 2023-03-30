@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y \
 # Add requirements and install them. We do this unnecessasy rebuilding.
 ADD requirements.txt /
 ADD requirements-plugins.txt /
+ADD postgredb.env /
+ADD superuser.env /
 
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
