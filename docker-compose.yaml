@@ -5,28 +5,23 @@ services:
   postgres:
     image: postgres:10
     restart: unless-stopped
-    environment:
-      - POSTGRES_USER=misago
-      - POSTGRES_PASSWORD=misago
+    env_file:
+      - postgredb.env
+    volumes:
+      - /home/gradient/projects/nestlogic/spam_detector_eval/storage/postgresql/data/:/var/lib/postgresql/data/
     ports:
       - '127.0.0.1:5432:5432'
+
   redis:
     image: redis:5
     restart: unless-stopped
+
   misago:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
-    environment:
-      # Postgres
-      - POSTGRES_USER=misago
-      - POSTGRES_PASSWORD=misago
-      - POSTGRES_DB=misago
-      - POSTGRES_HOST=postgres
-      - POSTGRES_TEST_DB=misago_test
-      # Superuser
-      - SUPERUSER_USERNAME=Admin
-      - SUPERUSER_EMAIL=admin@example.com
-      - SUPERUSER_PASSWORD=password
+    env_file:
+      - postgredb.env
+      - superuser.env
     ports:
       # Map port 8000 in the container to port 8000 on the host
       # This way we can access the forum through http://localhost:8000
@@ -42,13 +37,8 @@ services:
   celery:
     build: .
     command: celery -A devproject worker --loglevel=info
-    environment:
-      # Postgres
-      - POSTGRES_USER=misago
-      - POSTGRES_PASSWORD=misago
-      - POSTGRES_DB=misago
-      - POSTGRES_HOST=postgres
-      - POSTGRES_TEST_DB=misago_test
+    env_file:
+      - postgredb.env
     depends_on:
       - postgres
       - redis
