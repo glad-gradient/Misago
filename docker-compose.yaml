@@ -10,7 +10,7 @@ services:
     volumes:
       - /home/gradient/projects/nestlogic/spam_detector_eval/storage/postgresql/data/:/var/lib/postgresql/data/
     ports:
-      - '127.0.0.1:5432:5432'
+      - '5432:5432'
 
   bridge:
     image: 127.0.0.1:5000/bridge
