@@ -12,6 +12,19 @@ services:
     ports:
       - '127.0.0.1:5432:5432'
 
+  bridge:
+    image: 127.0.0.1:5000/bridge
+    container_name: bridge
+    build:
+      context: ./
+      dockerfile: bridge/Dockerfile
+    env_file:
+      - postgredb.env
+    depends_on:
+      - postgres
+    tty: true
+    restart: on-failure
+
   redis:
     image: redis:5
     restart: unless-stopped
