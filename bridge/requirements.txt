@@ -1,0 +1,2 @@
+python-akismet
+psycopg2-binary
