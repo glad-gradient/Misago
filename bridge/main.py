@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import logging
+import json
 
 import psycopg2
 import psycopg2.extensions
@@ -12,7 +13,6 @@ from utils import environment_variables
 def main():
     logging.info("Listening 'message_events' channel")
 
-    # DB_ENV_VARS = environment_variables('/home/gradient/projects/nestlogic/spam_detector_eval/simulation/forum/Misago/postgredb.env')
     DB_ENV_VARS = environment_variables('postgredb.env')
 
     db_name = DB_ENV_VARS['POSTGRES_DB']
@@ -37,6 +37,14 @@ def main():
     akis_det = AkismetDetector()
     body_det = BodyguardDetector()
 
+    with open('configs.json') as f:
+        configs = json.load(f)
+
+    akismet_dbmanager = AkismetDbManager(table=configs["DETECTORS"]["Akismet"]["table"])
+    bodyguard_dbmanager = BodyguardDbManager(table=configs["DETECTORS"]["Bodyguard"]["table"])
+
+    del configs
+
     while True:
         # Wait for a notification
         conn.poll()  # This method blocks until a notification is received, so we can use it to wait for new notifications without wasting CPU cycles.
@@ -51,7 +59,7 @@ def main():
             # Akismet
             result = akis_det.pipeline(str(post_id), db_creds)
             analyzed_at = datetime.now().replace(tzinfo=timezone.utc)
-            AkismetDbManager().save(
+            akismet_dbmanager.save(
                 {'classification': result},
                 analyzed_at,
                 post_id,
@@ -67,7 +75,7 @@ def main():
                 analyzed_at = datetime.fromisoformat(analyzed_at[:-1])
             else:
                 analyzed_at = datetime.now().replace(tzinfo=timezone.utc)
-            BodyguardDbManager().save(
+            bodyguard_dbmanager.save(
                 result,
                 analyzed_at,
                 post_id,
