@@ -10,13 +10,15 @@ class AkismetDbManager:
 
     def save(self, data: dict, analyzed_at: datetime, post_id: int, db_creds: dict):
         # https://stackoverflow.com/questions/13793399/passing-table-name-as-a-parameter-in-psycopg2
-        query = sql.SQL("""
-            INSERT INTO {table} (
-                classification,
-                analyzed_at,
-                post_id          
-                ) VALUES (%s, %s, %s) RETURNING id;
-            """).format(table=sql.Identifier(self.table))
+        print("Akismet Table: ", self.table)
+        query = sql.SQL('INSERT INTO {table} (classification, analyzed_at, post_id) VALUES (%s, %s, %s) RETURNING id;').format(table=sql.Identifier(self.table))
+        # query = sql.SQL("""
+        #     INSERT INTO {table} (
+        #         classification,
+        #         analyzed_at,
+        #         post_id
+        #         ) VALUES (%s, %s, %s) RETURNING id;
+        #     """).format(table=sql.Identifier(self.table))
         args = (
             data['classification'], analyzed_at,
             post_id
@@ -55,19 +57,23 @@ class BodyguardDbManager:
         self.table = table
 
     def save(self, data: dict, analyzed_at: datetime, post_id: int, db_creds: dict):
-        query = sql.SQL(
-            """
-            INSERT INTO {table} (
-                        content_type,
-                        severity,
-                        classifications,
-                        directed_at,
-                        recommended_action,
-                        analyzed_at, 
-                        post_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
-            """
-        ).format(table=sql.Identifier(self.table))
+        print("Bodyguard Table: ", self.table)
+
+        query = sql.SQL('INSERT INTO {table} (content_type, severity, classifications, directed_at, recommended_action, analyzed_at, post_id) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;').format(table=sql.Identifier(self.table))
+
+        # query = sql.SQL(
+        #     """
+        #     INSERT INTO {table} (
+        #                 content_type,
+        #                 severity,
+        #                 classifications,
+        #                 directed_at,
+        #                 recommended_action,
+        #                 analyzed_at,
+        #                 post_id
+        #         ) VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
+        #     """
+        # ).format(table=sql.Identifier(self.table))
 
         args = (
             data['type'],
