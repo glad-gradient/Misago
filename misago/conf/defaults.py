@@ -72,7 +72,7 @@ MISAGO_POST_SEARCH_FILTERS = []
 
 MISAGO_POSTING_MIDDLEWARES = [
     # Always keep FloodProtectionMiddleware middleware first one
-    "misago.threads.api.postingendpoint.floodprotection.FloodProtectionMiddleware",
+    # "misago.threads.api.postingendpoint.floodprotection.FloodProtectionMiddleware",
     "misago.threads.api.postingendpoint.category.CategoryMiddleware",
     "misago.threads.api.postingendpoint.privatethread.PrivateThreadMiddleware",
     "misago.threads.api.postingendpoint.reply.ReplyMiddleware",
