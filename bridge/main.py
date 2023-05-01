@@ -40,6 +40,7 @@ def main():
     with open('configs.json') as f:
         configs = json.load(f)
 
+    use_context = configs['use_context']
     akismet_dbmanager = AkismetDbManager(table=configs["DETECTORS"]["Akismet"]["table"])
     bodyguard_dbmanager = BodyguardDbManager(table=configs["DETECTORS"]["Bodyguard"]["table"])
 
@@ -57,7 +58,7 @@ def main():
 
             post_id = int(notify.payload)
             # Akismet
-            result = akis_det.pipeline(str(post_id), db_creds)
+            result = akis_det.pipeline(str(post_id), use_context, db_creds)
             analyzed_at = datetime.now().replace(tzinfo=timezone.utc)
             akismet_dbmanager.save(
                 {'classification': result},
@@ -67,7 +68,7 @@ def main():
             )
 
             # Bodyguard
-            result = body_det.pipeline(str(post_id), db_creds)
+            result = body_det.pipeline(str(post_id), use_context, db_creds)
             if isinstance(result, list):
                 result = result[0]
             analyzed_at = result.pop('analyzed_at', None)

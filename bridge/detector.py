@@ -53,15 +53,15 @@ class SpamDetector(ABC):
         except (Exception, psycopg2.Error) as error:
             print("Error while connecting to PostgreSQL: ", error)
 
-    def prepare_data_for_API_detector(self, data):
+    def prepare_data_for_API_detector(self, data, use_context):
         raise NotImplementedError
 
     def evaluate(self, **kwargs):
         raise NotImplementedError
 
-    def pipeline(self, record_id: str, db_creds: dict):
+    def pipeline(self, record_id: str, use_context: bool, db_creds: dict):
         data = self.get_data(record_id, db_creds)
-        data_prepared = self.prepare_data_for_API_detector(data[0])
+        data_prepared = self.prepare_data_for_API_detector(data[0], use_context)
         return self.evaluate(**data_prepared)
 
 
@@ -80,7 +80,7 @@ class AkismetDetector(SpamDetector):
         with open('user_agents.json') as f:
             return json.load(f)
 
-    def prepare_data_for_API_detector(self, data):
+    def prepare_data_for_API_detector(self, data, use_context):
         with open('configs.json') as f:
             configs = json.load(f)
 
@@ -100,30 +100,31 @@ class AkismetDetector(SpamDetector):
         if self.use_single_user_agent and "username" in data and data["username"] in self.user_agents:
             kwargs["user_agent"] = self.user_agents[data["username"]]
 
-        if "username" in data:
-            kwargs["comment_author"] = data["username"]
-
-        if "email" in data:
-            kwargs["comment_author_email"] = data["email"]
-
         if "message" in data:
             kwargs["comment_content"] = data["message"]
 
-        # permalink - The full permanent URL of the entry the comment was submitted to.
-        if "title" in data and "thread_id" in data:
-            kwargs["permalink"] = "{url}/t/{title}/{thread_id}/".format(
-                url=blog_url,
-                title=data["title"], thread_id=data["thread_id"]
-            )
+        if use_context:
+            if "username" in data:
+                kwargs["comment_author"] = data["username"]
 
-        # comment_type
-        kwargs["comment_type"] = "reply"
+            if "email" in data:
+                kwargs["comment_author_email"] = data["email"]
 
-        if "comment_time" in data:
-            kwargs["comment_date"] = data["comment_time"] # .isoformat()
+            # permalink - The full permanent URL of the entry the comment was submitted to.
+            if "title" in data and "thread_id" in data:
+                kwargs["permalink"] = "{url}/t/{title}/{thread_id}/".format(
+                    url=blog_url,
+                    title=data["title"], thread_id=data["thread_id"]
+                )
 
-        # if "thread_time" in data:
-        #     kwargs["comment_post_modified_gmt"] = data["thread_time"].isoformat()
+            # comment_type
+            kwargs["comment_type"] = "reply"
+
+            if "comment_time" in data:
+                kwargs["comment_date"] = data["comment_time"] # .isoformat()
+
+            # if "thread_time" in data:
+            #     kwargs["comment_post_modified_gmt"] = data["thread_time"].isoformat()
 
         return kwargs
 
@@ -198,7 +199,7 @@ class BodyguardDetector(SpamDetector):
         ]
     }
     """
-    def prepare_data_for_API_detector(self, data):
+    def prepare_data_for_API_detector(self, data, use_context):
         with open('configs.json') as f:
             configs = json.load(f)
 
@@ -212,84 +213,85 @@ class BodyguardDetector(SpamDetector):
         if "message" in data:
             kwargs["text"] = data["message"]
 
-        # reference  http://127.0.0.1:8000/t/learn-python/1/post/7/
-        if "title" in data and "thread_id" in data and "comment_id" in data:
-            kwargs["reference"] = "{title}/{thread_id}/post/{comment_id}/".format(
-                title=data["title"],
-                thread_id=data["thread_id"],
-                comment_id=data["comment_id"]
-            )
-
         if "comment_time" in data:
             kwargs["publishedAt"] = str(data["comment_time"].isoformat())
 
-        # *************************** Context *****************************
-        context = {}
-        # topLevelReference: Allows you to link this message to the top level message. Example: e.g first/original post.
-        if "title" in data and "thread_id" in data:
-            context["topLevelReference"] = "{title}/{thread_id}".format(title=data["title"], thread_id=data["thread_id"])
+        if use_context:
+            # reference  http://127.0.0.1:8000/t/learn-python/1/post/7/
+            if "title" in data and "thread_id" in data and "comment_id" in data:
+                kwargs["reference"] = "{title}/{thread_id}/post/{comment_id}/".format(
+                    title=data["title"],
+                    thread_id=data["thread_id"],
+                    comment_id=data["comment_id"]
+                )
 
-        # "parentReference": "", # Allows you to link this message to a parent message.
-        # permalink: Allows you to link the analyzed message to the original message on the platform.
-        if "title" in data and "thread_id" in data and "comment_id" in data:
-            context["permalink"] = "{url}/t/{title}/{thread_id}/post/{comment_id}/".format(
-                url=blog_url,
-                title=data["title"], thread_id=data["thread_id"], comment_id=data["comment_id"]
-            )
+            # *************************** Context *****************************
+            context = {}
+            # topLevelReference: Allows you to link this message to the top level message. Example: e.g first/original post.
+            if "title" in data and "thread_id" in data:
+                context["topLevelReference"] = "{title}/{thread_id}".format(title=data["title"], thread_id=data["thread_id"])
 
-        # ******************** Sender **********************
-        sender = {
-            "type": "AUTHOR",
-            "data": {}
-        }
-        sender_data = sender["data"]
-        if "user_id" in data:
-            sender_data["identifier"] = str(data["user_id"])
-        else:
-            raise Exception("User identifier is required")
+            # "parentReference": "", # Allows you to link this message to a parent message.
+            # permalink: Allows you to link the analyzed message to the original message on the platform.
+            if "title" in data and "thread_id" in data and "comment_id" in data:
+                context["permalink"] = "{url}/t/{title}/{thread_id}/post/{comment_id}/".format(
+                    url=blog_url,
+                    title=data["title"], thread_id=data["thread_id"], comment_id=data["comment_id"]
+                )
 
-        # profilePictureURL
+            # ******************** Sender **********************
+            sender = {
+                "type": "AUTHOR",
+                "data": {}
+            }
+            sender_data = sender["data"]
+            if "user_id" in data:
+                sender_data["identifier"] = str(data["user_id"])
+            else:
+                raise Exception("User identifier is required")
 
-        # username
-        if "username" in data:
-            sender_data["username"] = data["username"]
+            # profilePictureURL
 
-        # user permalink.
-        # A permalink to the user associated with this author on your platform. http://127.0.0.1:8000/u/user5/4/posts/
-        if "user_slug" in data and "user_id" in data:
-            sender_data["permalink"] = "{url}/u/{user_slug}/{user_id}/posts/".format(
-                url=blog_url,
-                user_slug=data["user_slug"], user_id=data["user_id"]
-            )
+            # username
+            if "username" in data:
+                sender_data["username"] = data["username"]
 
-        context["from"] = sender
+            # user permalink.
+            # A permalink to the user associated with this author on your platform. http://127.0.0.1:8000/u/user5/4/posts/
+            if "user_slug" in data and "user_id" in data:
+                sender_data["permalink"] = "{url}/u/{user_slug}/{user_id}/posts/".format(
+                    url=blog_url,
+                    user_slug=data["user_slug"], user_id=data["user_id"]
+                )
 
-        # ********************** Post ************************
-        post = {
-            "type": "TEXT",
-            "data": {}
-        }
-        post_data = post["data"]
+            context["from"] = sender
 
-        if "thread_id" in data:
-            post_data["identifier"] = str(data["thread_id"])
-        else:
-            raise Exception("Post identifier is required")
+            # ********************** Post ************************
+            post = {
+                "type": "TEXT",
+                "data": {}
+            }
+            post_data = post["data"]
 
-        if "original_title" in data:
-            post_data["title"] = data["original_title"]
-        if "thread_time" in data:
-            post_data["publishedAt"] = str(data["thread_time"].isoformat())
+            if "thread_id" in data:
+                post_data["identifier"] = str(data["thread_id"])
+            else:
+                raise Exception("Post identifier is required")
 
-        # A permalink to the post on your platform.
-        if "title" in data and "thread_id" in data:
-            post_data["permalink"] = "{url}/t/{title}/{thread_id}/".format(
-                url=blog_url,
-                title=data["title"], thread_id=data["thread_id"]
-            )
-        context["post"] = post
+            if "original_title" in data:
+                post_data["title"] = data["original_title"]
+            if "thread_time" in data:
+                post_data["publishedAt"] = str(data["thread_time"].isoformat())
 
-        kwargs["context"] = context
+            # A permalink to the post on your platform.
+            if "title" in data and "thread_id" in data:
+                post_data["permalink"] = "{url}/t/{title}/{thread_id}/".format(
+                    url=blog_url,
+                    title=data["title"], thread_id=data["thread_id"]
+                )
+            context["post"] = post
+
+            kwargs["context"] = context
 
         return kwargs
 
